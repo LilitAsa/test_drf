@@ -3,24 +3,34 @@ from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from .models import Post, Category
+from .serializers import PostSerializer
+from django.forms.models import model_to_dict
+
 
 
 class PostApiView(APIView):
     def get(self, request):
-        posts = Post.objects.values()
-        return Response({"posts": list(posts)})
-    
+        posts = Post.objects.all()
+        return Response({
+                "posts": PostSerializer(posts, many=True).data
+            }
+        )
     def post(self, request):
-        title = request.data.get("title")
-        content = request.data.get("content")
-        category_id = request.data.get("category")
-        category = Category.objects.get(id=category_id)
-        new_post = Post.objects.create(title=title, content=content, category=category)
+        serializer = PostSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        new_post = Post.objects.create(
+            title=request.data.get("title"),
+            content=request.data.get("content"),
+            category_id=request.data.get("category_id"),
+        )
+        serializer.save()
         return Response({"post": model_to_dict(new_post)})
     
-    
-    
     def put(self, request):
+        slug = request.data.get("slug")
+        if Post.objects.filter(slug=slug).exists():
+            return Response({"error": "Slug already exists"}, status=400)
         id = request.data.get("id")
         title = request.data.get("title")
         content = request.data.get("content")
@@ -50,10 +60,9 @@ class PostDetailApiView(APIView):
     
     def delete(self, request, id):
         Post.objects.filter(id=id).delete()
-        return Response({"status": "success"})
-    
-    
-    
+        return Response({"status": "success"})  
 
+
+    
 
 
