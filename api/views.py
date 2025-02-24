@@ -18,50 +18,34 @@ class PostApiView(APIView):
     def post(self, request):
         serializer = PostSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-
-        new_post = Post.objects.create(
-            title=request.data.get("title"),
-            content=request.data.get("content"),
-            category_id=request.data.get("category_id"),
-        )
         serializer.save()
-        return Response({"post": model_to_dict(new_post)})
+        return Response({"post": serializer.data})
     
-    def put(self, request):
-        slug = request.data.get("slug")
-        if Post.objects.filter(slug=slug).exists():
-            return Response({"error": "Slug already exists"}, status=400)
-        id = request.data.get("id")
-        title = request.data.get("title")
-        content = request.data.get("content")
-        category_id = request.data.get("category")
-        category = Category.objects.get(id=category_id)
-        Post.objects.filter(id=id).update(title=title, content=content, category=category)
-        return Response({"post": model_to_dict(Post.objects.get(id=id))})
+    def put(self, request,*args,**kwargs):
+        pk = kwargs.get("pk", None)
+        print(kwargs.get("pk"))
+        if not pk:
+            return Response({"error": "Method Put is not allowed"})
+        try:
+            instance = Post.objects.get(pk=pk)
+        except:
+            return Response({"error": "Object not found"})
+        serializer = PostSerializer(instance=instance,data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({"post": serializer.data})
     
-    def delete(self, request):
-        id = request.data.get("id")
-        Post.objects.filter(id=id).delete()
-        return Response({"status": "success"})  
+    def delete(self, request,*args,**kwargs):
+        pk = kwargs.get("pk", None)
+        if not pk:
+            return Response({"error": "Method Delete is not allowed"})
+        try:
+            instance = Post.objects.get(pk=pk)
+        except:
+            return Response({"error": "Object not found"})
+        instance.delete()
+        return Response({"post": f"{str(instance.title)} is deleted"})
     
-
-class PostDetailApiView(APIView):
-    def get(self, request, id):
-        post = Post.objects.get(id=id)
-        return Response({"post": post})
-    
-    def put(self, request, id):
-        title = request.data.get("title")
-        content = request.data.get("content")
-        category_id = request.data.get("category")
-        category = Category.objects.get(id=category_id)
-        Post.objects.filter(id=id).update(title=title, content=content, category=category)
-        return Response({"post": model_to_dict(Post.objects.get(id=id))})
-    
-    def delete(self, request, id):
-        Post.objects.filter(id=id).delete()
-        return Response({"status": "success"})  
-
 
     
 
